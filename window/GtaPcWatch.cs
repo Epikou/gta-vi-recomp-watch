@@ -57,6 +57,7 @@ class News
 class Effort
 {
     public string Name, Repo, Stage, Summary;
+    public double World, Playable, Story, Render; // suite de l'echelle et pistes de qualite (histoire, rendu)
     public double Loads, Boots, Menu, InGame; // etapes PortWatch, de 0 a 1 (0,5 = credit partiel)
     public double Fps;                        // images par seconde en jeu selon PortWatch (0 = inconnu)
     public double Groundwork;                 // part du travail preparatoire, de 0 a 1
@@ -842,7 +843,8 @@ class MainForm : Form
                     string stage = "pas encore de GTA VI";
                     if (gta != null)
                     {
-                        if (Str(gta, "ingame") == "1") stage = "en jeu";
+                        if (Str(gta, "playable") == "1") stage = "jouable";
+                        else if (Str(gta, "world") == "1") stage = "dans le monde";
                         else if (Str(gta, "menu") == "1") stage = "menus";
                         else if (Str(gta, "boots") == "1") stage = "démarre";
                         else if (Str(gta, "loads") == "1") stage = "l'exécutable tourne, écran noir";
@@ -856,6 +858,8 @@ class MainForm : Form
                     {
                         eff.Loads = Num(gta, "loads"); eff.Boots = Num(gta, "boots");
                         eff.Menu = Num(gta, "menu"); eff.InGame = Num(gta, "ingame");
+                        eff.World = gta.ContainsKey("world") ? Num(gta, "world") : eff.InGame;
+                        eff.Playable = Num(gta, "playable"); eff.Story = Num(gta, "story"); eff.Render = Num(gta, "render");
                         eff.Fps = Num(gta, "fps");
                         eff.Stability = Str(gta, "stability");
                     }

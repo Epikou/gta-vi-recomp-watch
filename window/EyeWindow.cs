@@ -49,9 +49,14 @@ static class Tr
         { "st2", new[] { "exe runs", "exe lancé", "exe arranca" } },
         { "st3", new[] { "first frame", "1re image", "1.ª imagen" } },
         { "st4", new[] { "main menu", "menu principal", "menú principal" } },
-        { "st5", new[] { "in-game", "en jeu", "en juego" } },
-        { "st6", new[] { "30 FPS", "30 FPS", "30 FPS" } },
-        { "st7", new[] { "stable", "stable", "estable" } },
+        { "st5", new[] { "in the world", "dans le monde", "en el mundo" } },
+        { "st6", new[] { "playable", "jouable", "jugable" } },
+        { "st7", new[] { "complete", "terminé", "completo" } },
+        { "beyond", new[] { "story · rendering · performance · stability", "histoire · rendu · performance · stabilité", "historia · gráficos · rendimiento · estabilidad" } },
+        { "private", new[] { "Private builds, not ranked", "Versions privées, hors classement", "Versiones privadas, sin clasificar" } },
+        { "privnote", new[] { "Private build: no public code, so it is not ranked.", "Version privée : pas de code public, donc hors classement.", "Versión privada: sin código público, por eso no se clasifica." } },
+        { "quality", new[] { "Past playable", "Au-delà de « jouable »", "Más allá de «jugable»" } },
+        { "tracks", new[] { "Story {0} % · Rendering {1} % · Performance {2} % · Stability {3} %", "Histoire {0} % · Rendu {1} % · Performance {2} % · Stabilité {3} %", "Historia {0} % · Gráficos {1} % · Rendimiento {2} % · Estabilidad {3} %" } },
         { "ev.commits1", new[] { "{0}: 1 new commit", "{0} : 1 nouveau commit", "{0}: 1 commit nuevo" } },
         { "ev.commitsN", new[] { "{0}: {1} new commits", "{0} : {1} nouveaux commits", "{0}: {1} commits nuevos" } },
         { "ev.status", new[] { "{0}: GTA VI status changed", "{0} : l'état GTA VI a changé", "{0}: el estado de GTA VI ha cambiado" } },
@@ -66,6 +71,10 @@ static class Tr
         { "unmute", new[] { "Muted - turn back on", "En sourdine - réactiver", "Silenciado - reactivar" } },
         { "m.tray", new[] { "Minimize next to the clock", "Réduire près de l'horloge", "Minimizar junto al reloj" } },
         { "m.show", new[] { "Show the eye", "Afficher l'œil", "Mostrar el ojo" } },
+        { "m.update", new[] { "Check for updates (version {0})", "Rechercher une mise à jour (version {0})", "Buscar actualización (versión {0})" } },
+        { "upd.done", new[] { "Updated to version {0}", "Mis à jour en version {0}", "Actualizado a la versión {0}" } },
+        { "upd.none", new[] { "Already up to date (version {0})", "Déjà à jour (version {0})", "Ya está al día (versión {0})" } },
+        { "upd.fail", new[] { "Could not check for updates", "Vérification de mise à jour impossible", "No se pudo buscar actualizaciones" } },
         { "tip.none", new[] { "GTA VI recomp PC status - nothing new", "GTA VI recomp PC status - rien de nouveau", "GTA VI recomp PC status - nada nuevo" } },
         { "tip.some", new[] { "GTA VI recomp PC status - {0} important change(s)", "GTA VI recomp PC status - {0} changement(s) important(s)", "GTA VI recomp PC status - {0} cambio(s) importante(s)" } },
     };
@@ -88,10 +97,12 @@ class Entry
     public string Name, Repo, Summary = "";
     // Les sept paliers de PortWatch VI et le score ou ils se trouvent sur l'echelle de 0 a 100.
     public const int Stages = 7;
-    public static readonly int[] Tick = { 0, 25, 40, 55, 70, 85, 100 };
+    public static readonly int[] Tick = { 0, 10, 20, 30, 40, 50, 100 };
+    public double[] Tracks = new double[4];  // histoire, rendu, performance, stabilite : 0 a 1
+    public bool Private;                     // pas de code public : PortWatch ne le classe pas
     public double[] St = new double[Stages]; // 0 a 1 par palier
     public double Score;
-    public int Reached = 1;                  // dernier palier atteint, de 1 (preparation) a 7 (stable)
+    public int Reached = 1;                  // dernier palier atteint, de 1 (preparation) a 7 (termine)
     public bool Missing;
     public string Key = "";  // identite du projet : son depot, ou son identifiant PortWatch s'il n'en a pas
     public string Url = "";  // page a ouvrir : le depot GitHub, sinon l'article PortWatch
@@ -116,16 +127,17 @@ class Entry
     }
 
     // Meme calcul que scoreEffort() dans le scoring.js de PortWatch VI.
-    // Le travail preparatoire remplit les 25 premiers points ; ensuite chaque palier franchi fixe le score
-    // (25, 40, 55, 70), un palier partiel avance d'une fraction vers le suivant, et une fois en jeu
-    // les 30 FPS puis la stabilite apportent 15 points chacun.
+    // Entrer dans le jeu est une echelle : preparation (0 a 10), puis 10, 20, 30, 40 et "jouable" a 50,
+    // un palier partiel avancant d'une fraction vers le suivant. Une fois jouable, quatre pistes
+    // remplissent les 50 points restants : histoire 35 %, rendu 25 %, performance (FPS / 30) 20 %,
+    // stabilite 20 %. 100 = le jeu peut etre termine.
     public void Apply(Effort e)
     {
-        double[] ladder = { Unit(e.Loads), Unit(e.Boots), Unit(e.Menu), Unit(e.InGame) };
+        double[] ladder = { Unit(e.Loads), Unit(e.Boots), Unit(e.Menu), Unit(e.World), Unit(e.Playable) };
         double score = Tick[1] * Unit(e.Groundwork), prev = score;
         int reached = 0;
         St[0] = Unit(e.Groundwork);
-        for (int k = 0; k < 4; k++)
+        for (int k = 0; k < 5; k++)
         {
             double v = ladder[k];
             if (v >= 1) { score = Tick[k + 1]; prev = score; reached = k + 1; St[k + 1] = 1; continue; }
@@ -133,17 +145,17 @@ class Entry
             break;
         }
         if (reached >= 1) St[0] = 1; // le jeu tourne : la preparation est derriere
-        if (reached == 4)
+        Tracks[0] = Unit(e.Story); Tracks[1] = Unit(e.Render); Tracks[2] = Unit(e.Fps / 30); Tracks[3] = StabilityValue(e.Stability);
+        if (reached == 5)
         {
-            double fps = Unit(e.Fps / 30), stab = StabilityValue(e.Stability);
-            score = Tick[4] + fps * (Tick[5] - Tick[4]) + stab * (Tick[6] - Tick[5]);
-            St[5] = fps; St[6] = stab;
-            if (fps >= 1) reached = 5;
-            if (fps >= 1 && stab >= 1) reached = 6;
+            double quality = 0.35 * Tracks[0] + 0.25 * Tracks[1] + 0.2 * Tracks[2] + 0.2 * Tracks[3];
+            score = Tick[5] + quality * (Tick[6] - Tick[5]);
+            St[6] = quality;
+            if (quality >= 1) reached = 6;
         }
         // PortWatch fixe parfois un score a la main, quand son echelle ne sait pas exprimer le cas.
         if (e.Manual >= 0) score = Math.Min(100, Math.Max(0, e.Manual));
-        Score = Math.Round(score * 10) / 10;
+        Score = Math.Floor(score * 10 + 0.5) / 10; // arrondi comme Math.round de JavaScript
         Reached = reached + 1;
     }
 }
@@ -184,6 +196,7 @@ class EyeWindow : Form
     readonly int snapRank;
 
     List<Entry> ranking = new List<Entry>();
+    List<Entry> privates = new List<Entry>(); // versions sans code public : notees, mais hors classement
     bool baselined;
     string prevLeader;
     Entry detail;
@@ -276,6 +289,55 @@ class EyeWindow : Form
         anim.Interval = 33;
         anim.Tick += delegate { Step(); };
         Shown += delegate { Place(); Redraw(); anim.Start(); };
+        if (Array.IndexOf(args, "--tray") >= 0) Shown += delegate { ToTray(); }; // relance apres mise a jour, fenetre masquee
+
+        // Mise a jour depuis GitHub : peu apres le demarrage, puis toutes les trois heures.
+        // Jamais pendant une capture de verification ni en demonstration.
+        if (snapPath == null && !Program.Demo)
+        {
+            Updater.Cleanup();
+            if (Array.IndexOf(args, "--updated") >= 0)
+                tray.ShowBalloonTip(5000, "GTA VI recomp PC status", Tr.F("upd.done", Updater.Version), ToolTipIcon.None);
+            updateTimer.Interval = 15000;
+            updateTimer.Tick += delegate { updateTimer.Interval = 3 * 3600 * 1000; CheckUpdate(false); };
+            updateTimer.Start();
+        }
+    }
+
+    readonly Timer updateTimer = new Timer();
+    bool updating;
+
+    // Cherche une version plus recente sans bloquer l'affichage ; si elle est installee, redemarre dessus.
+    // "manual" : demande faite depuis le menu, on dit alors aussi quand il n'y a rien de neuf.
+    void CheckUpdate(bool manual)
+    {
+        if (updating) return;
+        updating = true;
+        System.Threading.ThreadPool.QueueUserWorkItem(delegate
+        {
+            bool done = false, failed = false;
+            string version = Updater.Version;
+            try { done = Updater.Apply(out version); }
+            catch (Exception) { failed = true; }
+            try
+            {
+                BeginInvoke((MethodInvoker)delegate
+                {
+                    updating = false;
+                    if (done)
+                    {
+                        // Le nouveau programme reprend la meme place : les reglages sont enregistres a la fermeture.
+                        string more = (expanded ? " --open" : "") + (Visible ? "" : " --tray");
+                        Close();
+                        System.Diagnostics.Process.Start(Updater.ExePath, "--updated" + more);
+                    }
+                    else if (manual)
+                        tray.ShowBalloonTip(4000, "GTA VI recomp PC status",
+                            failed ? Tr.S("upd.fail") : Tr.F("upd.none", Updater.Version), ToolTipIcon.None);
+                });
+            }
+            catch (Exception) { }
+        });
     }
 
     protected override CreateParams CreateParams
@@ -416,11 +478,11 @@ class EyeWindow : Form
         Dictionary<string, Entry> map = new Dictionary<string, Entry>(StringComparer.OrdinalIgnoreCase);
         foreach (Effort e in main.pwEfforts)
         {
-            // Un projet peut ne pas avoir de depot public (code prive) : PortWatch le classe quand meme,
-            // donc nous aussi. Son lien mene alors a l'article qui le decrit.
+            // Un projet peut ne pas avoir de depot public (version privee). PortWatch le note mais ne le
+            // classe pas : nous l'affichons a part. Son lien mene a l'article qui le decrit.
             bool hasRepo = System.Text.RegularExpressions.Regex.IsMatch(e.Repo ?? "", @"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$");
             if (!hasRepo && string.IsNullOrEmpty(e.Id)) continue;
-            Entry x = new Entry { Name = e.Name, Repo = hasRepo ? e.Repo : "", Summary = e.Summary ?? "", Missing = e.Missing || e.Nuked, Stars = e.Stars };
+            Entry x = new Entry { Name = e.Name, Repo = hasRepo ? e.Repo : "", Summary = e.Summary ?? "", Missing = e.Missing || e.Nuked, Stars = e.Stars, Private = !hasRepo };
             x.Key = hasRepo ? e.Repo : "pw:" + e.Id;
             x.Url = hasRepo ? "https://github.com/" + e.Repo
                 : System.Text.RegularExpressions.Regex.IsMatch(e.Link ?? "", @"^news/[a-z0-9-]+\.html$") ? "https://portwatch-vi.xyz/" + e.Link
@@ -431,20 +493,23 @@ class EyeWindow : Form
         foreach (Project p in main.projects) Merge(map, p);
         foreach (Project a in main.actors) Merge(map, a);
 
-        List<Entry> list = new List<Entry>();
+        // Le classement ne retient que le code public ; les versions privees sont listees a part, sans rang.
+        List<Entry> list = new List<Entry>(), priv = new List<Entry>(), all = new List<Entry>();
         foreach (Entry x in map.Values)
-            if (!x.Missing && x.Score > 0) list.Add(x);
-        list.Sort(delegate(Entry a, Entry b)
+            if (!x.Missing && x.Score > 0) { (x.Private ? priv : list).Add(x); all.Add(x); }
+        Comparison<Entry> order = delegate(Entry a, Entry b)
         {
             int c = b.Score.CompareTo(a.Score);
             if (c == 0) c = b.Stars.CompareTo(a.Stars); // a egalite, PortWatch place devant le depot le plus etoile
             return c != 0 ? c : string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase);
-        });
+        };
+        list.Sort(order);
+        priv.Sort(order);
 
         if (baselined)
         {
             bool sound = false;
-            foreach (Entry x in list)
+            foreach (Entry x in all)
             {
                 double old;
                 if (prevScores.TryGetValue(x.Key, out old) && Math.Abs(old - x.Score) > 0.05 && !main.IsMuted(x.Key))
@@ -465,7 +530,7 @@ class EyeWindow : Form
         {
             baselined = true;
             prevLeader = list[0].Key;
-            foreach (Entry x in list) prevScores[x.Key] = x.Score;
+            foreach (Entry x in all) prevScores[x.Key] = x.Score;
         }
         if (detail != null)
         {
@@ -474,6 +539,7 @@ class EyeWindow : Form
             detail = same ?? detail;
         }
         ranking = list;
+        privates = priv;
     }
 
     // ---------- animation ----------
@@ -515,6 +581,7 @@ class EyeWindow : Form
         if (snapPath != null && ++snapTicks == 240) // environ 8 s : le premier releve est arrive
         {
             if (snapDetail && ranking.Count > snapRank) detail = ranking[snapRank];
+            else if (snapDetail && snapRank >= 100 && snapRank - 100 < privates.Count) detail = privates[snapRank - 100]; // 100 et plus : les versions privees
             if (snapAnim > 0F) { FreePanel(); animT = snapAnim; animDir = 1; } // fige l'animation a mi-course pour la capture
             Snapshot(snapPath);
             if (snapAnim > 0F) { animT = 1F; animDir = 0; FreePanel(); }
@@ -1046,26 +1113,44 @@ class EyeWindow : Form
         Txt(g, status, 12F, false, C(0xB7A6C9), h.X, y2 + 5F, x2 - h.X - 10F);
     }
 
-    // Les sept etapes d'un projet : pastilles reliees, pleines, a moitie ou vides.
+    // L'echelle d'un projet, dessinee comme celle de PortWatch : une barre a l'echelle de 0 a 100,
+    // remplie jusqu'au score, un cran a chaque palier (10, 20, 30, 40, 50) et son nom dessous.
+    // La seconde moitie, de "jouable" a "termine", est celle des quatre pistes de qualite.
     void DrawStages(Graphics g, Entry e, RectangleF c, float cy)
     {
-        Color grey = C(0x9A86B0);
-        float cell = (c.Width - 8) / (float)Entry.Stages;
-        for (int i = 0; i < Entry.Stages; i++)
-        {
-            float cx = c.X + 4 + cell * i + cell / 2F;
-            double v = e.St[i];
-            if (i < Entry.Stages - 1)
-                using (Pen pen = new Pen(C(e.St[i + 1] >= 0.5 ? 0xFF46A0 : 0x3A1C5A), 2F)) g.DrawLine(pen, cx + 10, cy, cx + cell - 10, cy);
-            if (v >= 0.99) using (SolidBrush b = new SolidBrush(C(0xFF46A0))) g.FillEllipse(b, cx - 9, cy - 9, 18, 18);
-            else
+        Color grey = C(0xC4B2D6); // lisible aussi quand le panneau est retourne et que la barre passe sur l'orange
+        RectangleF bar = new RectangleF(c.X + 4, cy - 7, c.Width - 8, 14);
+        Fill(g, C(0x2E1650), bar, 7F);
+        if (e.Score > 0)
+            using (GraphicsPath p = RR(new RectangleF(bar.X, bar.Y, Math.Max(14F, bar.Width * (float)e.Score / 100F), bar.Height), 7F))
+            using (LinearGradientBrush lg = new LinearGradientBrush(bar, C(0x7B4DFF), C(0xFF9A42), 0F))
             {
-                using (SolidBrush b = new SolidBrush(C(0x2E1650))) g.FillEllipse(b, cx - 9, cy - 9, 18, 18);
-                if (v >= 0.25) using (SolidBrush b = new SolidBrush(C(0xFF46A0))) g.FillPie(b, cx - 9, cy - 9, 18, 18, 90, 180);
-                using (Pen pen = new Pen(C(v >= 0.25 ? 0xFF46A0 : 0x6E5E84), 1.4F)) g.DrawEllipse(pen, cx - 9, cy - 9, 18, 18);
+                ColorBlend blend = new ColorBlend();
+                blend.Colors = new[] { C(0x8A55F0), C(0xFF46A0), C(0xFF9A42) };
+                blend.Positions = new[] { 0F, 0.5F, 1F };
+                lg.InterpolationColors = blend;
+                g.FillPath(lg, p);
             }
-            using (SolidBrush b = new SolidBrush(v >= 0.25 ? Color.White : grey))
-                g.DrawString(StageName(i + 1), F(11F, false), b, new RectangleF(cx - cell / 2F + 2, cy + 13, cell - 4, 30), SfCenter);
+        using (SolidBrush b = new SolidBrush(C(0x150A23)))
+            for (int i = 1; i < Entry.Stages - 1; i++)
+                g.FillRectangle(b, bar.X + Entry.Tick[i] * bar.Width / 100F - 1F, bar.Y, 2F, bar.Height);
+
+        using (StringFormat left = new StringFormat())
+        using (StringFormat right = new StringFormat())
+        {
+            right.Alignment = StringAlignment.Far;
+            float step = bar.Width / 10F;
+            for (int i = 0; i < Entry.Stages - 1; i++)
+            {
+                bool on = i == 0 || e.Score >= Entry.Tick[i];
+                using (SolidBrush b = new SolidBrush(on ? Color.White : grey))
+                    g.DrawString(StageName(i + 1), F(9.5F, false), b, new RectangleF(bar.X + step * i - 1, cy + 11, step + 1, 32), left);
+            }
+            bool done = e.Score >= 100;
+            using (SolidBrush b = new SolidBrush(grey))
+                g.DrawString(Tr.S("beyond"), F(10F, false), b, new RectangleF(bar.X + step * 6 + 4, cy + 11, step * 2.9F, 32), left);
+            using (SolidBrush b = new SolidBrush(done ? Color.White : grey))
+                g.DrawString(StageName(Entry.Stages), F(10F, done), b, new RectangleF(bar.Right - step, cy + 11, step, 32), right);
         }
     }
 
@@ -1154,7 +1239,23 @@ class EyeWindow : Form
         Txt(g, Tr.S("ranking"), 13F, true, orange, c.X + 4, c.Y + 236, 300);
         for (int i = 3; i < 6 && i < ranking.Count; i++) DrawRow(g, c, c.Y + 262 + (i - 3) * 26, i + 1, ranking[i]);
 
+        // Versions privees : une ligne, sans rang, chaque nom ouvre sa fiche.
         float ny = c.Y + 346;
+        if (privates.Count > 0)
+        {
+            float px = c.X + 4 + Txt(g, Tr.S("private"), 13F, true, orange, c.X + 4, ny, 320) + 14;
+            foreach (Entry pe in privates)
+            {
+                string label = pe.Name + "  " + pe.ScoreText();
+                float pw = TxtW(g, label, 12.5F, true);
+                if (px + pw > c.Right - 4) break;
+                Txt(g, label, 12.5F, true, Color.White, px, ny, pw + 4);
+                Entry target = pe;
+                Hit(new RectangleF(px - 4, ny - 4, pw + 8, 24F), delegate { detail = target; newsScroll = 0; dirty = true; });
+                px += pw + 22;
+            }
+            ny += 32;
+        }
         Txt(g, Tr.S("news"), 13F, true, orange, c.X + 4, ny, 300);
         RectangleF area = new RectangleF(c.X, ny + 24, c.Width, c.Bottom - ny - 24);
         GraphicsState state = g.Save();
@@ -1177,6 +1278,8 @@ class EyeWindow : Form
         g.Restore(state);
         newsMax = Math.Max(0, y + newsScroll - area.Bottom);
     }
+
+    static string Pct(double v) { return Math.Round(v * 100).ToString(CultureInfo.InvariantCulture); }
 
     // Fiche d'un projet : etapes, etat declare, derniers commits.
     void DrawDetail(Graphics g)
@@ -1212,6 +1315,12 @@ class EyeWindow : Form
         g.SetClip(area, CombineMode.Intersect);
         float y = area.Y - newsScroll;
         Project p = e.Proj;
+        if (e.Private) { Txt(g, Tr.S("privnote"), 12.5F, false, C(0xFFB98A), c.X + 4, y, c.Width - 8); y += 26; }
+        if (e.Reached >= 6)
+        {
+            Txt(g, Tr.S("quality"), 13F, true, orange, c.X + 4, y, 400); y += 22;
+            Txt(g, Tr.F("tracks", Pct(e.Tracks[0]), Pct(e.Tracks[1]), Pct(e.Tracks[2]), Pct(e.Tracks[3])), 12.5F, false, lilac, c.X + 4, y, c.Width - 8); y += 30;
+        }
         if (p != null && p.Error != null) { Txt(g, Tr.F("error", p.Error), 12F, false, C(0xFF7878), c.X + 4, y, c.Width - 8); y += 22; }
         if (p != null && !string.IsNullOrEmpty(p.Status))
         {
@@ -1424,6 +1533,7 @@ class EyeWindow : Form
         ToolStripMenuItem top = new ToolStripMenuItem(Tr.S("m.top"), null, delegate { TopMost = !TopMost; SaveSettings(); });
         top.Checked = TopMost;
         menu.Items.Add(top);
+        menu.Items.Add(Tr.F("m.update", Updater.Version), null, delegate { CheckUpdate(true); });
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(Tr.S("m.quit"), null, delegate { Close(); });
         menu.Show(screen);

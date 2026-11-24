@@ -25,16 +25,25 @@ Every project climbs the same ladder, from 0 to 100:
 
 | Milestone | Score | What it means |
 |---|---|---|
-| Groundwork | 0 to 25 | loader, shader translation and graphics layer, before the game even starts |
-| Exe runs | 25 | the game's own code starts running |
-| First frame | 40 | logos, a loading screen or the intro |
-| Main menu | 55 | the menu is reached and answers the controller |
-| In-game | 70 | story mode loads and you can move around |
-| 30 FPS | 85 | a 30 FPS average in game |
-| Stable | 100 | long sessions without crashing |
+| Groundwork | 0 to 10 | loader, shader translation and graphics layer, before the game even starts |
+| Exe runs | 10 | the game's own code starts running |
+| First frame | 20 | logos, a loading screen or the intro |
+| Main menu | 30 | the menu is reached and answers the controller |
+| In the world | 40 | story mode loads into the game world and draws it, however broken |
+| Playable | 50 | you control a character in the world |
+| Complete | 100 | the whole game can be finished, looking and running like the console |
 
-The bar at the top of the panel shows where the leader stands on that ladder, the podium shows the top three,
-and the list below shows who is chasing them. A half-filled dot means a milestone is only partly reached.
+Past Playable, the other 50 points come from four tracks: story progress (35 %), rendering (25 %),
+performance (average FPS ÷ 30, 20 %) and stability (20 %).
+
+The bar at the top of the panel is drawn to that scale and filled up to the leader's score, the podium shows
+the top three, and the list below shows who is chasing them.
+
+Only public code is ranked, as on PortWatch VI. Private builds, which nobody else can check, are scored
+and listed on their own line, without a rank.
+
+This is PortWatch VI's scale as of 24 November 2026 (it was reworked that day). If they change it again, the
+widget has to be updated to match, which is what the built-in updater is for.
 
 ## One project up close
 
@@ -57,7 +66,7 @@ corner. The interface is in English, French or Spanish.
 - **The two small strokes by the eye**: drag to resize.
 - **Pin button**: keep it above other windows.
 - **Dash button**: fold back to the eye when pinned, otherwise hide next to the clock.
-- **Right-click** the eye or the tray icon: language, always on top, quit.
+- **Right-click** the eye or the tray icon: language, always on top, check for updates, quit.
 
 Hidden next to the clock, the tray icon is the eye itself: closed or open. A balloon announces important
 changes.
@@ -70,10 +79,20 @@ Position, size, language and muted projects are saved in `%APPDATA%\GtaPcWatch\s
 - Every 2 minutes: PortWatch VI's data, and the commit feed of every project PortWatch tracks.
 - Every 4 minutes: a search for new projects of the same kind.
 
-It only reads public pages. It downloads no game files, needs no account and sends nothing anywhere.
+It only reads public pages. It downloads no game files, needs no account and sends nothing anywhere. The
+one thing it downloads is its own new version, from this repository.
 
 A change of status has to be read twice in a row before it is announced, an empty or truncated answer is
 treated as a failed read instead of news, and the same event is never announced twice within ten minutes.
+
+## Updates
+
+Download `GtaPcWatch.exe` from the [latest release](https://github.com/Epikou/gta-vi-recomp-watch/releases/latest).
+From then on it keeps itself up to date: shortly after starting, and every three hours, it looks at the latest
+release on this repository. If the version there is newer, it downloads the new program, checks it against
+the SHA-256 published with the release, replaces itself and restarts where it was.
+
+It only ever downloads from this repository's releases. To update by hand instead, use the right-click menu.
 
 ## Building
 
@@ -88,6 +107,8 @@ which then draws its own icon, and the second pass embeds that icon.
 
 - `window/GtaPcWatch.cs` is the polling engine.
 - `window/EyeWindow.cs` is the window: the eye, the panel, the translations.
+- `window/Updater.cs` is the updater; the version number lives there.
+- `window/release.ps1` builds and publishes a release (`GtaPcWatch.exe` and `version.txt`).
 
 ## Limits
 
