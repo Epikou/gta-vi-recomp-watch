@@ -21,7 +21,7 @@ MAX_COMMITS = 12
 # depot -> (branche, fichier d'etat, fonction d'extraction)
 REPOS = {
     "Marvisak/VIctory": "main",
-    "ivall/xcl": "main",
+    "xcl-dev/xcl": "main",
     "brcly/TuxBox": "main",
 }
 SEARCHES = [
@@ -30,7 +30,7 @@ SEARCHES = [
 ]
 # Projets deja examines : ne sont plus signales comme nouveaux.
 KNOWN = {
-    "marvisak/victory", "ivall/xcl", "brcly/tuxbox", "projectleonida/leonida", "r0y00/xbox2windows",
+    "marvisak/victory", "xcl-dev/xcl", "brcly/tuxbox", "projectleonida/leonida", "r0y00/xbox2windows",
     "freminet/scarlettx", "sammwyy/xvalkyrie", "jadeowaowa/scarlett-layer", "trinitronclient/zenith-x",
     "t-crypt/bathyal", "dom-in/leonida", "etoile-bleu/leonida-reviews",
     "ahmet-dedeler/awesome-gta6-reverse-engineering",
@@ -58,7 +58,7 @@ def line_with(text, needle):
 
 STATUS = {
     "Marvisak/VIctory": ("README.md", victory_status),
-    "ivall/xcl": ("README.md", lambda t: line_with(t, "newer retail game")),
+    "xcl-dev/xcl": ("README.md", lambda t: line_with(t, "newer retail game")),
     "brcly/TuxBox": ("docs/PROGRESS.md", lambda t: line_with(t, "ProjectScarlett (GTA VI")),
 }
 

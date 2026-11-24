@@ -63,6 +63,9 @@ class Effort
     public string Stability = "unknown";
     public bool Nuked;
     public string Tier = "", Branch = "main";
+    public string Id = "", Link = ""; // Link : article PortWatch, pour un projet sans depot public
+    public int Stars;
+    public double Manual = -1; // score fixe a la main par PortWatch ("manualScore"), -1 s'il n'y en a pas
     public bool Missing;
 }
 
@@ -238,7 +241,7 @@ class MainForm : Form
     {
         projects.Add(new Project { Name = "VIctory", Repo = "Marvisak/VIctory", Branch = "main",
             StatusPath = "README.md", Extract = ExtractVictory });
-        projects.Add(new Project { Name = "XCL", Repo = "ivall/xcl", Branch = "main",
+        projects.Add(new Project { Name = "XCL", Repo = "xcl-dev/xcl", Branch = "main",
             StatusPath = "README.md", Extract = ExtractXcl });
         projects.Add(new Project { Name = "TuxBox", Repo = "brcly/TuxBox", Branch = "main",
             StatusPath = "docs/PROGRESS.md", Extract = ExtractTuxBox });
@@ -846,7 +849,9 @@ class MainForm : Form
                     }
                     if (stats != null && Str(stats, "missing") == "True") stage = "dépôt disparu";
                     Effort eff = new Effort { Name = Str(x, "name"), Repo = Str(x, "repo"), Stage = stage, Summary = Str(x, "summary"),
-                        Tier = Str(x, "tier"), Branch = Str(x, "branch") };
+                        Tier = Str(x, "tier"), Branch = Str(x, "branch"), Id = Str(x, "id"), Link = Str(x, "link") };
+                    if (stats != null) eff.Stars = (int)Num(stats, "stars");
+                    if (x.ContainsKey("manualScore") && x["manualScore"] != null) eff.Manual = Num(x, "manualScore");
                     if (gta != null)
                     {
                         eff.Loads = Num(gta, "loads"); eff.Boots = Num(gta, "boots");
@@ -863,6 +868,14 @@ class MainForm : Form
                             + 0.32 * Unit(Num(gw, "graphics")) + 0.2 * Unit(Num(gw, "proven"));
                     efforts.Add(eff);
                 }
+            // Un depot peut changer de compte (XCL : ivall/xcl devenu xcl-dev/xcl). On suit le projet par son nom,
+            // sinon il serait releve deux fois et perdrait son etat declare dans le classement.
+            foreach (Project p in projects)
+                foreach (Effort x in efforts)
+                    if (string.Equals(x.Name, p.Name, StringComparison.OrdinalIgnoreCase) && !x.Missing && !x.Nuked
+                        && Regex.IsMatch(x.Repo ?? "", @"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
+                        && !string.Equals(x.Repo, p.Repo, StringComparison.OrdinalIgnoreCase))
+                        p.Repo = x.Repo;
             pwEfforts = efforts;
             SyncActors(efforts);
             pwNews = news;

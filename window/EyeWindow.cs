@@ -93,6 +93,9 @@ class Entry
     public double Score;
     public int Reached = 1;                  // dernier palier atteint, de 1 (preparation) a 7 (stable)
     public bool Missing;
+    public string Key = "";  // identite du projet : son depot, ou son identifiant PortWatch s'il n'en a pas
+    public string Url = "";  // page a ouvrir : le depot GitHub, sinon l'article PortWatch
+    public int Stars;
     public Project Proj;
 
     public int TopStage() { return Reached; }
@@ -138,6 +141,8 @@ class Entry
             if (fps >= 1) reached = 5;
             if (fps >= 1 && stab >= 1) reached = 6;
         }
+        // PortWatch fixe parfois un score a la main, quand son echelle ne sait pas exprimer le cas.
+        if (e.Manual >= 0) score = Math.Min(100, Math.Max(0, e.Manual));
         Score = Math.Round(score * 10) / 10;
         Reached = reached + 1;
     }
@@ -411,10 +416,17 @@ class EyeWindow : Form
         Dictionary<string, Entry> map = new Dictionary<string, Entry>(StringComparer.OrdinalIgnoreCase);
         foreach (Effort e in main.pwEfforts)
         {
-            if (string.IsNullOrEmpty(e.Repo)) continue;
-            Entry x = new Entry { Name = e.Name, Repo = e.Repo, Summary = e.Summary ?? "", Missing = e.Missing || e.Nuked };
+            // Un projet peut ne pas avoir de depot public (code prive) : PortWatch le classe quand meme,
+            // donc nous aussi. Son lien mene alors a l'article qui le decrit.
+            bool hasRepo = System.Text.RegularExpressions.Regex.IsMatch(e.Repo ?? "", @"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$");
+            if (!hasRepo && string.IsNullOrEmpty(e.Id)) continue;
+            Entry x = new Entry { Name = e.Name, Repo = hasRepo ? e.Repo : "", Summary = e.Summary ?? "", Missing = e.Missing || e.Nuked, Stars = e.Stars };
+            x.Key = hasRepo ? e.Repo : "pw:" + e.Id;
+            x.Url = hasRepo ? "https://github.com/" + e.Repo
+                : System.Text.RegularExpressions.Regex.IsMatch(e.Link ?? "", @"^news/[a-z0-9-]+\.html$") ? "https://portwatch-vi.xyz/" + e.Link
+                : "https://portwatch-vi.xyz/";
             x.Apply(e);
-            map[e.Repo] = x;
+            map[x.Key] = x;
         }
         foreach (Project p in main.projects) Merge(map, p);
         foreach (Project a in main.actors) Merge(map, a);
@@ -425,6 +437,7 @@ class EyeWindow : Form
         list.Sort(delegate(Entry a, Entry b)
         {
             int c = b.Score.CompareTo(a.Score);
+            if (c == 0) c = b.Stars.CompareTo(a.Stars); // a egalite, PortWatch place devant le depot le plus etoile
             return c != 0 ? c : string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase);
         });
 
@@ -434,14 +447,14 @@ class EyeWindow : Form
             foreach (Entry x in list)
             {
                 double old;
-                if (prevScores.TryGetValue(x.Repo, out old) && Math.Abs(old - x.Score) > 0.05 && !main.IsMuted(x.Repo))
+                if (prevScores.TryGetValue(x.Key, out old) && Math.Abs(old - x.Score) > 0.05 && !main.IsMuted(x.Key))
                 {
                     main.events.Insert(0, new Evt { When = DateTime.Now, Major = true, Kind = "score", Subject = x.Name,
                         Detail = x.ScoreText() + "|" + old.ToString("0.#", CultureInfo.InvariantCulture) + " %", Text = x.Name + " " + x.ScoreText() });
                     sound = true;
                 }
             }
-            if (list.Count > 0 && prevLeader != null && list[0].Repo != prevLeader)
+            if (list.Count > 0 && prevLeader != null && list[0].Key != prevLeader)
             {
                 main.events.Insert(0, new Evt { When = DateTime.Now, Major = true, Kind = "leader", Subject = list[0].Name, Text = list[0].Name });
                 sound = true;
@@ -451,13 +464,13 @@ class EyeWindow : Form
         if (list.Count > 0)
         {
             baselined = true;
-            prevLeader = list[0].Repo;
-            foreach (Entry x in list) prevScores[x.Repo] = x.Score;
+            prevLeader = list[0].Key;
+            foreach (Entry x in list) prevScores[x.Key] = x.Score;
         }
         if (detail != null)
         {
             Entry same = null;
-            foreach (Entry x in map.Values) if (x.Repo == detail.Repo) same = x;
+            foreach (Entry x in map.Values) if (x.Key == detail.Key) same = x;
             detail = same ?? detail;
         }
         ranking = list;
@@ -1175,7 +1188,7 @@ class EyeWindow : Form
         Txt(g, e.Name, 18F, true, Color.White, c.X + 16 + w, c.Y - 1, 300);
         TxtRight(g, e.ScoreText(), 22F, true, Color.White, c.Right - 4, c.Y - 4);
 
-        string url = "https://github.com/" + e.Repo;
+        string url = e.Url;
         float uw = Txt(g, url, 12F, false, C(0xFF8FC6), c.X + 4, c.Y + 34, c.Width - 8);
         using (Pen pen = new Pen(C(0xFF8FC6), 1F)) g.DrawLine(pen, c.X + 4, c.Y + 50, c.X + 4 + uw, c.Y + 50);
         Hit(new RectangleF(c.X + 4, c.Y + 32, uw, 20), delegate { OpenLink(url); });
@@ -1183,12 +1196,12 @@ class EyeWindow : Form
         else
         {
             // sourdine : plus aucune nouveaute pour ce depot (commits, etat, score)
-            bool muted = main.IsMuted(e.Repo);
+            bool muted = main.IsMuted(e.Key);
             string label = Tr.S(muted ? "unmute" : "mute");
             float mw = TxtW(g, label, 12F, false) + 24F;
             if (muted) Fill(g, C(0x5A2A6E), new RectangleF(c.Right - 4 - mw, c.Y + 28, mw, 26F), 13F);
-            string repo = e.Repo;
-            Pill(g, label, c.Right - 4 - mw, c.Y + 28, delegate { ToggleMute(repo); });
+            string key = e.Key;
+            Pill(g, label, c.Right - 4 - mw, c.Y + 28, delegate { ToggleMute(key); });
         }
 
         Txt(g, Tr.S("stages"), 13F, true, orange, c.X + 4, c.Y + 66, 200);

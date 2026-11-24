@@ -93,6 +93,8 @@ which then draws its own icon, and the second pass embeds that icon.
 
 - The scores are PortWatch VI's judgement, not a measurement. If their site stops updating, the ranking freezes.
 - Statuses are what each author declares. Nothing here verifies them.
+- Some ranked projects have no public code. They are listed because PortWatch VI ranks them; their page links
+  to the PortWatch article instead of a repository, and there are no commits to follow.
 - Commit titles, declared statuses and PortWatch texts stay in English whatever the interface language.
 
 ## Credits
