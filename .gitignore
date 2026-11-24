@@ -1,0 +1,6 @@
+# Produits par window\build.cmd
+window/GtaPcWatch.exe
+window/eye.ico
+
+# Etat local de l'ancien script de releve
+state.json
