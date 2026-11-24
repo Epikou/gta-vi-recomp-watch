@@ -511,6 +511,7 @@ class MainForm : Form
             if (withTracker)
             {
                 LoadTracker(found);
+                Links.Refresh();
                 foreach (Project a in actors) LoadProject(a, found);
                 actorsDirty = true;
                 actorsLoaded = true;

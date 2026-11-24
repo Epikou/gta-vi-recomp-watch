@@ -55,6 +55,7 @@ static class Tr
         { "beyond", new[] { "story · rendering · performance · stability", "histoire · rendu · performance · stabilité", "historia · gráficos · rendimiento · estabilidad" } },
         { "private", new[] { "Private builds, not ranked", "Versions privées, hors classement", "Versiones privadas, sin clasificar" } },
         { "privnote", new[] { "Private build: no public code, so it is not ranked.", "Version privée : pas de code public, donc hors classement.", "Versión privada: sin código público, por eso no se clasifica." } },
+        { "follow", new[] { "Where to follow", "Où suivre", "Dónde seguir" } },
         { "quality", new[] { "Past playable", "Au-delà de « jouable »", "Más allá de «jugable»" } },
         { "tracks", new[] { "Story {0} % · Rendering {1} % · Performance {2} % · Stability {3} %", "Histoire {0} % · Rendu {1} % · Performance {2} % · Stabilité {3} %", "Historia {0} % · Gráficos {1} % · Rendimiento {2} % · Estabilidad {3} %" } },
         { "ev.commits1", new[] { "{0}: 1 new commit", "{0} : 1 nouveau commit", "{0}: 1 commit nuevo" } },
@@ -104,6 +105,7 @@ class Entry
     public double Score;
     public int Reached = 1;                  // dernier palier atteint, de 1 (preparation) a 7 (termine)
     public bool Missing;
+    public string Id = "";   // identifiant PortWatch, pour retrouver ses liens (Discord, stream)
     public string Key = "";  // identite du projet : son depot, ou son identifiant PortWatch s'il n'en a pas
     public string Url = "";  // page a ouvrir : le depot GitHub, sinon l'article PortWatch
     public int Stars;
@@ -483,6 +485,7 @@ class EyeWindow : Form
             bool hasRepo = System.Text.RegularExpressions.Regex.IsMatch(e.Repo ?? "", @"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$");
             if (!hasRepo && string.IsNullOrEmpty(e.Id)) continue;
             Entry x = new Entry { Name = e.Name, Repo = hasRepo ? e.Repo : "", Summary = e.Summary ?? "", Missing = e.Missing || e.Nuked, Stars = e.Stars, Private = !hasRepo };
+            x.Id = e.Id ?? "";
             x.Key = hasRepo ? e.Repo : "pw:" + e.Id;
             x.Url = hasRepo ? "https://github.com/" + e.Repo
                 : System.Text.RegularExpressions.Regex.IsMatch(e.Link ?? "", @"^news/[a-z0-9-]+\.html$") ? "https://portwatch-vi.xyz/" + e.Link
@@ -1316,6 +1319,23 @@ class EyeWindow : Form
         float y = area.Y - newsScroll;
         Project p = e.Proj;
         if (e.Private) { Txt(g, Tr.S("privnote"), 12.5F, false, C(0xFFB98A), c.X + 4, y, c.Width - 8); y += 26; }
+        List<string[]> links = Links.For(e.Id);
+        if (links.Count > 0)
+        {
+            // Discord, stream, reseaux du projet : un bouton par lien, a la ligne si la place manque.
+            Txt(g, Tr.S("follow"), 13F, true, orange, c.X + 4, y, 400); y += 24;
+            float lx = c.X + 4;
+            foreach (string[] l in links)
+            {
+                string label = l[0] + " ↗", target = l[1];
+                float lw = TxtW(g, label, 12F, false) + 24F;
+                if (lx > c.X + 4 && lx + lw > c.Right - 4) { lx = c.X + 4; y += 32; }
+                // hors de la zone visible, le bouton ne doit ni se dessiner ni capter les clics
+                if (y >= area.Y - 2 && y + 26 <= area.Bottom) Pill(g, label, lx, y, delegate { OpenLink(target); });
+                lx += lw + 8;
+            }
+            y += 40;
+        }
         if (e.Reached >= 6)
         {
             Txt(g, Tr.S("quality"), 13F, true, orange, c.X + 4, y, 400); y += 22;

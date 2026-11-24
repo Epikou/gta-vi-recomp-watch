@@ -1,0 +1,12 @@
+# Where to follow each project: one line per link, "PortWatch id|label|address".
+# The widget reads this file from the main branch every few minutes, so a dead link can be fixed
+# here without publishing a new version. Only https links to the sites listed in window/Links.cs
+# are accepted. Only channels confirmed as the project's own go here.
+victory-gta6|Rumble|https://rumble.com/user/hyphennn
+victory-gta6|YouTube|https://www.youtube.com/@hyphennnnnnn
+omonkey|Rumble (Swaggely)|https://rumble.com/user/Swaggely
+cgbj|X (video)|https://x.com/raul_bs3/status/2125172278975729688
+xcl|Discord|https://discord.gg/xcl
+xbox2windows|Discord|https://discord.gg/DMcmNtpd6R
+tuxbox|X|https://x.com/brclyxo
+tuxbox|YouTube|https://www.youtube.com/@Brclyxo

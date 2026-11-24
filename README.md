@@ -50,6 +50,10 @@ widget has to be updated to match, which is what the built-in updater is for.
 Click any project to see its milestones, the status its author declares, and its latest commits as they land.
 Too noisy? One button mutes that project.
 
+When a team has a public channel of its own (Discord server, Rumble or YouTube streams, X account), the page
+shows a button for each under "Where to follow". The list lives in [`links.txt`](links.txt) and is read again
+every couple of minutes, so a dead link is fixed there, without a new release.
+
 ![Project page: milestones, summary, latest commits and the mute button](window/captures/project-detail.png)
 
 ## Any corner, three languages
@@ -108,6 +112,7 @@ which then draws its own icon, and the second pass embeds that icon.
 - `window/GtaPcWatch.cs` is the polling engine.
 - `window/EyeWindow.cs` is the window: the eye, the panel, the translations.
 - `window/Updater.cs` is the updater; the version number lives there.
+- `window/Links.cs` reads `links.txt`, the channels where each project can be followed.
 - `window/release.ps1` builds and publishes a release (`GtaPcWatch.exe` and `version.txt`).
 
 ## Limits
