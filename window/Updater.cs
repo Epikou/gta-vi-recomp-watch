@@ -13,7 +13,7 @@ using System.Text.RegularExpressions;
 
 static class Updater
 {
-    public const string Version = "1.2.0";
+    public const string Version = "1.2.1";
     const string Base = "https://github.com/Epikou/gta-vi-recomp-watch/releases/latest/download/";
     const int MaxBytes = 20 * 1024 * 1024;
 

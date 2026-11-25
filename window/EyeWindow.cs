@@ -125,6 +125,9 @@ class Entry
             case "rarely": return 0.8;
             case "stable": return 1;
         }
+        // PortWatch peut aussi donner une note de 0 a 1 a la main (virgule possible selon la langue de Windows).
+        double v;
+        if (double.TryParse((s ?? "").Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out v)) return Unit(v);
         return 0; // unknown, constant
     }
 
